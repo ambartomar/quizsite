@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PersonaQuiz — Create & Play Beautiful Quizzes</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa7bf;--accent:#7c5cff;--accent-2:#00d4ff;--glass:rgba(255,255,255,0.04);--glass-2:rgba(255,255,255,0.02)}
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial;background:radial-gradient(1200px 600px at 10% 10%, rgba(124,92,255,0.12), transparent 6%), radial-gradient(900px 500px at 90% 90%, rgba(0,212,255,0.08), transparent 8%), linear-gradient(180deg,#071023 0%,#071422 100%);color:#e6eef8}
+    .app{max-width:1100px;margin:40px auto;padding:28px;border-radius:18px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02));box-shadow:0 10px 30px rgba(2,6,23,0.6), inset 0 1px 0 rgba(255,255,255,0.02)}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+    .brand{display:flex;gap:14px;align-items:center}
+    .logo{width:54px;height:54px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:20px;box-shadow:0 6px 20px rgba(124,92,255,0.18);transform:rotate(-12deg)}
+    h1{font-size:20px;margin:0}
+    p.sub{margin:0;color:var(--muted);font-size:13px}
+    .controls{display:flex;gap:10px;align-items:center}
+    button.btn{background:linear-gradient(90deg,var(--accent),var(--accent-2));border:none;padding:10px 14px;border-radius:10px;color:white;font-weight:600;cursor:pointer;box-shadow:0 8px 30px rgba(124,92,255,0.12);transition:transform .16s ease,box-shadow .16s}
+    button.btn:active{transform:translateY(1px)}
+    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 12px;color:var(--muted)}
+
+    main{display:grid;grid-template-columns:1fr 360px;gap:20px}
+    .panel{background:linear-gradient(180deg,var(--glass),var(--glass-2));padding:18px;border-radius:14px;border:1px solid rgba(255,255,255,0.02)}
+
+    /* Left column: quiz list + editor */
+    .quizzes{display:flex;flex-direction:column;gap:14px}
+    .card{padding:14px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.02));border:1px solid rgba(255,255,255,0.02);display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .card .meta{display:flex;gap:12px;align-items:center}
+    .avatar{width:56px;height:56px;border-radius:10px;background:linear-gradient(135deg,rgba(255,255,255,0.03),transparent);display:flex;align-items:center;justify-content:center;font-weight:700}
+    .title{font-weight:700}
+    .muted{color:var(--muted);font-size:13px}
+    .small{font-size:13px}
+
+    /* Right column: create form */
+    form label{display:block;font-size:13px;margin:6px 0;color:var(--muted)}
+    input[type=text],textarea,select{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit}
+    textarea{min-height:100px;resize:vertical}
+    .row{display:flex;gap:10px}
+
+    /* play area */
+    .play-area{display:none;padding:18px;border-radius:12px}
+    .question{font-weight:700;font-size:18px;margin-bottom:12px}
+    .answers{display:flex;flex-direction:column;gap:10px}
+    .answer{padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);cursor:pointer;transition:transform .12s,box-shadow .12s,background .12s}
+    .answer:hover{transform:translateY(-4px);box-shadow:0 12px 30px rgba(2,6,23,0.6)}
+    .answer.correct{background:linear-gradient(90deg, rgba(0,212,255,0.08), rgba(124,92,255,0.06));border-color:rgba(124,92,255,0.25)}
+    .answer.wrong{opacity:.6;filter:grayscale(.3)}
+
+    .footer{display:flex;justify-content:space-between;align-items:center;margin-top:16px}
+
+    /* modal */
+    .modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(rgba(5,9,14,0.5),rgba(5,9,14,0.7));backdrop-filter: blur(6px);opacity:0;pointer-events:none;transition:opacity .2s}
+    .modal.open{opacity:1;pointer-events:auto}
+    .modal .box{width:420px;background:linear-gradient(180deg,#061226, #071428);padding:18px;border-radius:12px;border:1px solid rgba(255,255,255,0.03);box-shadow:0 18px 60px rgba(2,6,23,0.8)}
+
+    .login-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+
+    /* leaderboard table */
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px;text-align:left;border-bottom:1px dashed rgba(255,255,255,0.03)}
+
+    /* small screens */
+    @media (max-width:980px){main{grid-template-columns:1fr;}.controls{flex-wrap:wrap}.app{margin:18px}}
+
+    /* subtle float animation */
+    @keyframes floaty{0%{transform:translateY(0)}50%{transform:translateY(-6px)}100%{transform:translateY(0)}}
+    .logo{animation:floaty 5s ease-in-out infinite}
+
+    /* micro interactions */
+    .pill{display:inline-flex;gap:8px;align-items:center;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.02)}
+    .muted-badge{color:var(--muted);font-size:12px}
+
+    /* empty state */
+    .empty{padding:30px;border-radius:12px;text-align:center;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="logo">PQ</div>
+        <div>
+          <h1>PersonaQuiz</h1>
+          <p class="sub">Create playful personality quizzes & let friends compete — local, private, instant.</p>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div id="user-area" class="pill">
+          <span id="user-name" class="muted-badge">Not signed in</span>
+        </div>
+        <button id="loginBtn" class="ghost">Login / Signup</button>
+        <button id="newQuizBtn" class="btn">New Quiz</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="panel">
+        <h3 style="margin-top:0">Available Quizzes</h3>
+        <div id="quizzes" class="quizzes">
+          <!-- Quiz cards injected here -->
+        </div>
+        <div id="noQuizzes" class="empty" style="display:none">No quizzes yet — click <b>New Quiz</b> to make one.</div>
+      </section>
+
+      <aside class="panel">
+        <h3 style="margin-top:0">Quick Create</h3>
+        <form id="quizForm">
+          <label>Quiz Title</label>
+          <input id="qTitle" type="text" placeholder="e.g. Which friend would you be?" required>
+
+          <label>Short Description</label>
+          <input id="qDesc" type="text" placeholder="One-liner that hooks players">
+
+          <label>Visibility</label>
+          <select id="qVisibility"><option value="public">Public (anyone)</option><option value="private">Private (link only)</option></select>
+
+          <label>Number of Questions</label>
+          <select id="qCount">
+            <option value="3">3</option>
+            <option value="5" selected>5</option>
+            <option value="7">7</option>
+            <option value="10">10</option>
+          </select>
+
+          <label>Creator</label>
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
+            <input id="creatorName" type="text" placeholder="Signed-in user will be auto-filled" readonly>
+            <button id="fillCreator" class="ghost" type="button">Fill</button>
+          </div>
+
+          <label>Questions (you'll edit after creating)</label>
+          <textarea id="qPreview" readonly>Questions will be created as placeholders — after creation you can edit each quiz and populate questions and answers with correctness or scoring.
+
+Tip: Make answers map to points for personality results (e.g. A=2, B=1, C=0).</textarea>
+
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="btn" id="createQuiz">Create Quiz</button>
+            <button class="ghost" id="resetForm" type="button">Reset</button>
+          </div>
+        </form>
+
+        <hr style="margin:18px 0;border:none;border-top:1px dashed rgba(255,255,255,0.03)">
+
+        <div>
+          <h4 style="margin:0 0 8px 0">Quick Tips</h4>
+          <p class="muted small">Design short focused quizzes (3–7 Qs) for better completion rates. Use scores to generate fun result messages. Leaderboards are stored locally — share the quiz ID to let others play.</p>
+        </div>
+      </aside>
+
+      <!-- Play area overlays below main so it can expand -->
+      <section id="player" class="panel play-area" style="grid-column:1/-1;margin-top:18px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div id="play-title" style="font-weight:800;font-size:18px"></div>
+            <div id="play-desc" class="muted" style="font-size:13px"></div>
+          </div>
+          <div>
+            <div class="pill"><span id="play-progress" class="muted-badge">Q 1 / 1</span></div>
+          </div>
+        </div>
+
+        <div id="play-body" style="margin-top:16px">
+          <!-- questions rendered here -->
+        </div>
+
+        <div class="footer">
+          <div class="muted" id="result-msg"></div>
+          <div>
+            <button id="nextBtn" class="btn">Next</button>
+            <button id="finishBtn" class="ghost">Finish</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- modals -->
+  <div id="loginModal" class="modal">
+    <div class="box">
+      <div class="login-head">
+        <div class="logo" style="width:48px;height:48px;font-size:18px">PQ</div>
+        <div>
+          <strong style="display:block">Sign in or Sign up</strong>
+          <div class="muted small">Simple local auth — stored in your browser only.</div>
+        </div>
+      </div>
+      <form id="authForm">
+        <label>Email</label>
+        <input id="email" type="text" placeholder="your@email.com" required>
+        <label>Display Name</label>
+        <input id="display" type="text" placeholder="How you'll appear on leaderboards" required>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn" type="submit">Continue</button>
+          <button id="closeLogin" class="ghost" type="button">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="leaderModal" class="modal">
+    <div class="box">
+      <h3>Leaderboard</h3>
+      <div id="leaderContent">Loading...</div>
+      <div style="display:flex;justify-content:flex-end;margin-top:12px">
+        <button id="closeLeader" class="ghost">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /***** Simple data layer using localStorage *****/
+    const DB = {
+      usersKey: 'pq_users_v1',
+      quizzesKey: 'pq_quizzes_v1',
+      currentKey: 'pq_current_user',
+      leadersKey: 'pq_leaders_v1',
+
+      load(key, fallback){ try{ return JSON.parse(localStorage.getItem(key)) || fallback }catch(e){return fallback} },
+      save(key,val){ localStorage.setItem(key, JSON.stringify(val)); }
+    }
+
+    // initialize storage
+    if(!DB.load(DB.usersKey, null)) DB.save(DB.usersKey, []);
+    if(!DB.load(DB.quizzesKey, null)) DB.save(DB.quizzesKey, []);
+    if(!DB.load(DB.leadersKey, null)) DB.save(DB.leadersKey, {});
+
+    // helpers
+    const uid = ()=>'id_'+Math.random().toString(36).slice(2,9);
+    const qs = (sel,el=document)=>el.querySelector(sel);
+    const qsa = (sel,el=document)=>Array.from(el.querySelectorAll(sel));
+
+    // elements
+    const loginBtn = qs('#loginBtn');
+    const loginModal = qs('#loginModal');
+    const authForm = qs('#authForm');
+    const closeLogin = qs('#closeLogin');
+    const userName = qs('#user-name');
+    const creatorName = qs('#creatorName');
+    const fillCreator = qs('#fillCreator');
+    const newQuizBtn = qs('#newQuizBtn');
+    const quizForm = qs('#quizForm');
+    const quizzesWrap = qs('#quizzes');
+    const noQuizzes = qs('#noQuizzes');
+    const player = qs('#player');
+    const playBody = qs('#play-body');
+    const playTitle = qs('#play-title');
+    const playDesc = qs('#play-desc');
+    const playProgress = qs('#play-progress');
+    const nextBtn = qs('#nextBtn');
+    const finishBtn = qs('#finishBtn');
+    const resultMsg = qs('#result-msg');
+    const createQuizBtn = qs('#createQuiz');
+    const resetForm = qs('#resetForm');
+    const leaderModal = qs('#leaderModal');
+    const leaderContent = qs('#leaderContent');
+    const closeLeader = qs('#closeLeader');
+
+    // state
+    let state = {
+      currentUser: DB.load(DB.currentKey, null),
+      users: DB.load(DB.usersKey, []),
+      quizzes: DB.load(DB.quizzesKey, []),
+      leaders: DB.load(DB.leadersKey, {})
+    }
+
+    // render user area
+    function renderUser(){
+      if(state.currentUser){
+        userName.textContent = state.currentUser.display;
+        creatorName.value = state.currentUser.display;
+      } else {
+        userName.textContent = 'Not signed in';
+        creatorName.value = '';
+      }
+    }
+
+    // login modal toggles
+    loginBtn.addEventListener('click', ()=>openModal(loginModal));
+    closeLogin.addEventListener('click', ()=>closeModal(loginModal));
+
+    authForm.addEventListener('submit', e=>{
+      e.preventDefault();
+      const email = qs('#email').value.trim();
+      const display = qs('#display').value.trim();
+      if(!email || !display) return alert('Please fill both fields');
+      // create or reuse user
+      let users = state.users;
+      let user = users.find(u=>u.email===email);
+      if(!user){ user = {id:uid(), email, display, created:Date.now()}; users.push(user); }
+      state.users = users;
+      state.currentUser = user;
+      DB.save(DB.usersKey, users);
+      DB.save(DB.currentKey, user);
+      renderUser();
+      closeModal(loginModal);
+    });
+
+    function openModal(el){ el.classList.add('open'); }
+    function closeModal(el){ el.classList.remove('open'); }
+
+    // fill creator button
+    fillCreator.addEventListener('click', ()=>{
+      if(state.currentUser) creatorName.value = state.currentUser.display;
+      else openModal(loginModal);
+    });
+
+    // new quiz opens quick create
+    newQuizBtn.addEventListener('click', ()=>{
+      window.scrollTo({top:0,behavior:'smooth'});
+    })
+
+    // create quiz
+    quizForm.addEventListener('submit', e=>{
+      e.preventDefault();
+      const title = qs('#qTitle').value.trim();
+      const desc = qs('#qDesc').value.trim();
+      const visibility = qs('#qVisibility').value;
+      const count = Number(qs('#qCount').value || 5);
+      const creator = (qs('#creatorName').value.trim() || (state.currentUser && state.currentUser.display) || 'Anonymous');
+      if(!title) return alert('Give the quiz a title');
+
+      // build placeholder questions
+      const questions = [];
+      for(let i=1;i<=count;i++){
+        questions.push({id:uid(), q:`Question ${i}: Describe this choice?`, choices:[
+          {id:uid(), text:'Option A', score:2}, {id:uid(), text:'Option B', score:1}, {id:uid(), text:'Option C', score:0}
+        ]});
+      }
+
+      const quiz = {id:uid(), title, desc, visibility, creator, created:Date.now(), questions};
+      state.quizzes.unshift(quiz);
+      DB.save(DB.quizzesKey, state.quizzes);
+      renderQuizzes();
+      quizForm.reset();
+      creatorName.value = state.currentUser? state.currentUser.display : '';
+      alert('Quiz created — now click Play to edit questions and share the quiz id with friends.');
+    });
+
+    resetForm.addEventListener('click', ()=>quizForm.reset());
+
+    // render quizzes list
+    function renderQuizzes(){
+      quizzesWrap.innerHTML = '';
+      if(state.quizzes.length===0){ noQuizzes.style.display='block'; return } else noQuizzes.style.display='none';
+
+      state.quizzes.forEach(q=>{
+        const card = document.createElement('div'); card.className='card';
+        const meta = document.createElement('div'); meta.className='meta';
+        const av = document.createElement('div'); av.className='avatar'; av.textContent = q.creator.slice(0,2).toUpperCase();
+        const info = document.createElement('div'); info.innerHTML = `<div class="title">${escapeHtml(q.title)}</div><div class="muted">by ${escapeHtml(q.creator)} • ${q.questions.length} Qs • ${q.visibility}</div>`;
+        meta.appendChild(av); meta.appendChild(info);
+
+        const actions = document.createElement('div'); actions.style.display='flex'; actions.style.gap='8px';
+        const play = document.createElement('button'); play.className='btn'; play.textContent='Play'; play.addEventListener('click', ()=>startQuiz(q.id));
+        const edit = document.createElement('button'); edit.className='ghost'; edit.textContent='Edit'; edit.addEventListener('click', ()=>editQuiz(q.id));
+        const share = document.createElement('button'); share.className='ghost'; share.textContent='Share'; share.addEventListener('click', ()=>{ prompt('Share this Quiz ID with friends to play:', q.id); });
+        const lead = document.createElement('button'); lead.className='ghost'; lead.textContent='Leaderboard'; lead.addEventListener('click', ()=>openLeaderboard(q.id));
+        actions.appendChild(play); actions.appendChild(edit); actions.appendChild(lead); actions.appendChild(share);
+
+        card.appendChild(meta); card.appendChild(actions);
+        quizzesWrap.appendChild(card);
+      })
+    }
+
+    // start play
+    let playState = null;
+    function startQuiz(quizId){
+      const quiz = state.quizzes.find(x=>x.id===quizId);
+      if(!quiz) return alert('Quiz not found');
+      playState = {quiz, index:0, total:quiz.questions.length, score:0, answers:[]};
+      renderPlay();
+      player.style.display='block';
+      player.scrollIntoView({behavior:'smooth'});
+    }
+
+    function renderPlay(){
+      const ps = playState; if(!ps) return;
+      playTitle.textContent = ps.quiz.title;
+      playDesc.textContent = ps.quiz.desc || '';
+      playProgress.textContent = `Q ${ps.index+1} / ${ps.total}`;
+      playBody.innerHTML = '';
+      const cur = ps.quiz.questions[ps.index];
+      const qEl = document.createElement('div'); qEl.className='question'; qEl.textContent = cur.q;
+      playBody.appendChild(qEl);
+      const answers = document.createElement('div'); answers.className='answers';
+      cur.choices.forEach(choice=>{
+        const a = document.createElement('div'); a.className='answer'; a.textContent = choice.text; a.dataset.score = choice.score; a.addEventListener('click', ()=>selectAnswer(a, choice));
+        answers.appendChild(a);
+      });
+      playBody.appendChild(answers);
+      resultMsg.textContent = '';
+      nextBtn.style.display='inline-block'; finishBtn.style.display='inline-block';
+    }
+
+    function selectAnswer(el, choice){
+      // mark selected instantly and show correct/wrong styling (this is scoring-based so just show selection)
+      qsa('.answer', playBody).forEach(x=>x.classList.remove('selected','correct','wrong'));
+      el.classList.add('selected');
+      // record
+      playState.answers[playState.index] = {choiceId: choice.id, score: Number(choice.score)};
+      // show subtle feedback
+      el.classList.add('correct');
+      resultMsg.textContent = 'Selected — click Next.';
+    }
+
+    nextBtn.addEventListener('click', ()=>{
+      if(!playState) return;
+      if(!playState.answers[playState.index]) return alert('Pick an answer first');
+      playState.index++;
+      if(playState.index>=playState.total){ // finished
+        finishQuiz();
+      } else renderPlay();
+    });
+
+    finishBtn.addEventListener('click', ()=>{
+      if(!playState) return; // allow early finish
+      finishQuiz();
+    })
+
+    function finishQuiz(){
+      // compute score
+      const total = playState.answers.reduce((s,a)=>s + (a?.score||0), 0);
+      playState.score = total;
+      // show result panel
+      resultMsg.textContent = `You scored ${total} points!`;
+      // push to leaderboard
+      const quizId = playState.quiz.id;
+      if(!state.leaders[quizId]) state.leaders[quizId]=[];
+      const entry = {id:uid(), user: state.currentUser? state.currentUser.display : prompt('Enter your display name for the leaderboard:'), score: total, time: Date.now() };
+      state.leaders[quizId].push(entry);
+      // sort desc and keep top 50
+      state.leaders[quizId].sort((a,b)=>b.score - a.score || a.time - b.time);
+      state.leaders[quizId] = state.leaders[quizId].slice(0,50);
+      DB.save(DB.leadersKey, state.leaders);
+
+      // show leaderboard modal directly
+      openLeaderboard(quizId);
+      // clear play state
+      playState = null; setTimeout(()=>player.style.display='none',200);
+    }
+
+    // edit quiz (a simple in-place editor)
+    function editQuiz(quizId){
+      const quiz = state.quizzes.find(x=>x.id===quizId);
+      if(!quiz) return alert('Quiz not found');
+      // simple prompt-based editor to keep single-file compact
+      const newTitle = prompt('Edit title', quiz.title); if(newTitle!==null) quiz.title = newTitle;
+      const newDesc = prompt('Edit description', quiz.desc||''); if(newDesc!==null) quiz.desc = newDesc;
+      // edit questions one by one
+      for(let i=0;i<quiz.questions.length;i++){
+        const q = quiz.questions[i];
+        const nq = prompt(`Q${i+1} text`, q.q); if(nq===null) break; q.q = nq;
+        // edit choices
+        for(let j=0;j<q.choices.length;j++){
+          const c = q.choices[j];
+          const nc = prompt(`Q${i+1} - Choice ${j+1} text`, c.text); if(nc===null) break; c.text = nc;
+          const ns = prompt(`Q${i+1} - Choice ${j+1} points (number)`, c.score); if(ns===null) break; c.score = Number(ns) || 0;
+        }
+        // allow adding additional choice
+        const add = confirm('Add another choice to this question?');
+        if(add){ q.choices.push({id:uid(), text:'New Option', score:0}); i--; continue; }
+      }
+      // allow add new question
+      const addQ = confirm('Add a new question?');
+      if(addQ){ quiz.questions.push({id:uid(), q:'New question', choices:[{id:uid(),text:'A',score:1},{id:uid(),text:'B',score:0}]}); }
+
+      // save
+      DB.save(DB.quizzesKey, state.quizzes);
+      renderQuizzes();
+      alert('Saved. You can now Play the quiz to test it.');
+    }
+
+    // leaderboard modal
+    function openLeaderboard(quizId){
+      const quiz = state.quizzes.find(x=>x.id===quizId);
+      const leaders = state.leaders[quizId] || [];
+      leaderContent.innerHTML = `<div style="margin-bottom:8px"><strong>${escapeHtml(quiz.title)}</strong><div class='muted small'>by ${escapeHtml(quiz.creator)}</div></div>`;
+      if(leaders.length===0){ leaderContent.innerHTML += '<div class="empty">No scores yet — be the first!</div>'; } else {
+        const table = document.createElement('table'); table.innerHTML = '<thead><tr><th>#</th><th>Player</th><th>Score</th><th>Time</th></tr></thead>';
+        const body = document.createElement('tbody'); leaders.forEach((l,i)=>{
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${i+1}</td><td>${escapeHtml(l.user||'Anon')}</td><td>${l.score}</td><td class='muted'>${new Date(l.time).toLocaleString()}</td>`;
+          body.appendChild(tr);
+        });
+        table.appendChild(body); leaderContent.appendChild(table);
+      }
+      openModal(leaderModal);
+    }
+    closeLeader.addEventListener('click', ()=>closeModal(leaderModal));
+
+    // utilities
+    function escapeHtml(s){ if(!s) return ''; return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // initial render
+    renderUser(); renderQuizzes();
+
+    // small UX: click background to close modals
+    document.addEventListener('click', e=>{
+      if(e.target.classList.contains('modal')) closeModal(e.target);
+    })
+
+    // keyboard quick actions
+    document.addEventListener('keydown', e=>{
+      if(e.key==='/' && document.activeElement.tagName!=='INPUT' && document.activeElement.tagName!=='TEXTAREA'){
+        e.preventDefault(); openModal(loginModal);
+      }
+    });
+
+    // expose to console for power users
+    window.PQ = {state, DB};
+  </script>
+</body>
+</html>
